@@ -1,4 +1,4 @@
-"""Generate two example fractal images for comparison."""
+"""Generate example fractal and galaxy images for comparison."""
 import perplexfern
 
 # ── Example 1: Dickens – repetitive literary prose ──────────────────────────
@@ -38,6 +38,7 @@ if __name__ == "__main__":
         print(m.summary())
         print()
 
+    # ── B&W Hilbert fractals ────────────────────────────────────────────
     perplexfern.analyse(
         dickens,
         metric="perplexity",
@@ -51,3 +52,16 @@ if __name__ == "__main__":
         save_path="fractal_biology.png",
     )
     print("Saved fractal_dickens.png and fractal_biology.png")
+
+    # ── Galaxy point-cloud scatter ──────────────────────────────────────
+    perplexfern.analyse_galaxy(
+        dickens,
+        title="Dickens – Galaxy",
+        save_path="galaxy_dickens.png",
+    )
+    perplexfern.analyse_galaxy(
+        biology,
+        title="Biology – Galaxy",
+        save_path="galaxy_biology.png",
+    )
+    print("Saved galaxy_dickens.png and galaxy_biology.png")

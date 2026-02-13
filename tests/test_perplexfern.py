@@ -5,7 +5,8 @@ import csv
 import numpy as np
 import pytest
 
-from perplexfern import parser, metrics, fractal, visualize
+from perplexfern import parser, metrics, fractal, visualize, galaxy
+from perplexfern import galaxy_viz
 import perplexfern
 
 
@@ -136,3 +137,67 @@ class TestAPI:
         m = perplexfern.analyse_metrics(SAMPLE)
         assert isinstance(m, metrics.TextMetrics)
         assert m.perplexity > 0
+
+
+# ── Galaxy module ───────────────────────────────────────────────────────────
+
+class TestGalaxy:
+    def test_galaxy_points_shapes(self):
+        metric_dict = {n: f for n, f in sorted(metrics.AVAILABLE_METRICS.items())}
+        pos, feat = galaxy.galaxy_points(SAMPLE, metric_dict)
+        assert pos.ndim == 2 and pos.shape[1] == 2
+        assert feat.ndim == 2 and feat.shape[1] == len(metric_dict)
+        assert pos.shape[0] == feat.shape[0]
+
+    def test_galaxy_image_shape_and_range(self):
+        metric_dict = {n: f for n, f in sorted(metrics.AVAILABLE_METRICS.items())}
+        pos, feat = galaxy.galaxy_points(SAMPLE, metric_dict, window_chars=60, stride_chars=30)
+        img = galaxy.galaxy_image(
+            pos, feat, list(metric_dict.keys()), resolution=256,
+        )
+        assert img.shape == (256, 256, 4)
+        assert img.min() >= 0.0 - 1e-6
+        assert img.max() <= 1.0 + 1e-6
+
+    def test_galaxy_image_with_glow(self):
+        metric_dict = {n: f for n, f in sorted(metrics.AVAILABLE_METRICS.items())}
+        pos, feat = galaxy.galaxy_points(SAMPLE, metric_dict, window_chars=60, stride_chars=30)
+        img = galaxy.galaxy_image(
+            pos, feat, list(metric_dict.keys()),
+            resolution=64, glow_sigma=3.0,
+        )
+        assert img.shape == (64, 64, 4)
+
+    def test_render_galaxy_figure(self):
+        img = np.random.default_rng(0).random((32, 32, 4)).astype(np.float32)
+        fig = galaxy_viz.render_galaxy(img)
+        import matplotlib.pyplot as plt
+        assert isinstance(fig, plt.Figure)
+        plt.close(fig)
+
+    def test_render_galaxy_save(self, tmp_path):
+        img = np.random.default_rng(0).random((32, 32, 4)).astype(np.float32)
+        out = tmp_path / "galaxy.png"
+        galaxy_viz.render_galaxy(img, save_path=out)
+        assert out.exists() and out.stat().st_size > 0
+        import matplotlib.pyplot as plt
+        plt.close("all")
+
+    def test_analyse_galaxy_e2e(self, tmp_path):
+        out = tmp_path / "galaxy_e2e.png"
+        fig = perplexfern.analyse_galaxy(
+            SAMPLE, save_path=out, resolution=64, glow=0,
+        )
+        import matplotlib.pyplot as plt
+        assert isinstance(fig, plt.Figure)
+        assert out.exists()
+        plt.close(fig)
+
+    def test_custom_palette(self):
+        metric_dict = {n: f for n, f in sorted(metrics.AVAILABLE_METRICS.items())}
+        pos, feat = galaxy.galaxy_points(SAMPLE, metric_dict, window_chars=60, stride_chars=30)
+        img = galaxy.galaxy_image(
+            pos, feat, list(metric_dict.keys()),
+            resolution=64, palette="plasma",
+        )
+        assert img.shape == (64, 64, 4)

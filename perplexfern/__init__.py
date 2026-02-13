@@ -31,6 +31,8 @@ from .metrics import (
 from .parser import parse
 from .fractal import signal_to_image, multi_scale_image
 from .visualize import render, render_to_bytes
+from .galaxy import galaxy_points, galaxy_image
+from .galaxy_viz import render_galaxy, render_galaxy_to_bytes
 
 
 # Sensible default metric ranges for intensity anchoring.
@@ -133,16 +135,107 @@ def analyse_metrics(source: Union[str, Path]) -> TextMetrics:
     return compute_summary(parse(source))
 
 
+def analyse_galaxy(
+    source: Union[str, Path],
+    *,
+    color_metric: str = "perplexity",
+    size_metric: str = "entropy",
+    resolution: int = 2048,
+    point_size: float = 1.0,
+    palette: str = "galaxy",
+    glow: float = 6.0,
+    save_path: Optional[Union[str, Path]] = None,
+    title: Optional[str] = None,
+    size: int = 12,
+    dpi: int = 200,
+) -> plt.Figure:
+    """
+    One-call convenience: parse → multi-metric windows → PCA scatter → plot.
+
+    Produces a colour-splashed point-cloud image (dark background, glowing
+    clusters) inspired by the Open Syllabus Galaxy.
+
+    Parameters
+    ----------
+    source : str or Path
+        Raw text or a path to a .txt / .json / .csv file.
+    color_metric : str
+        Metric that determines each point's colour.
+    size_metric : str
+        Metric that determines each point's radius.
+    resolution : int
+        Canvas side length in pixels (default 2048).
+    point_size : float
+        Base point radius multiplier.
+    palette : str
+        ``"galaxy"`` for the built-in neon palette, or any matplotlib
+        colormap name (e.g. ``"plasma"``, ``"viridis"``).
+    glow : float
+        Gaussian bloom radius (0 = off).
+    save_path : str or Path, optional
+        Save the figure here.
+    title : str, optional
+        Title overlaid on the image.
+    size, dpi : int
+        Figure size and resolution.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    text = parse(source)
+
+    # Use all available metrics for the scatter embedding
+    metric_dict = {
+        name: fn
+        for name, fn in sorted(AVAILABLE_METRICS.items())
+    }
+
+    positions, features = galaxy_points(text, metric_dict)
+    metric_names = list(metric_dict.keys())
+
+    image = galaxy_image(
+        positions, features, metric_names,
+        color_metric=color_metric,
+        size_metric=size_metric,
+        resolution=resolution,
+        point_size=point_size,
+        palette=palette,
+        glow_sigma=glow,
+    )
+
+    # Compute a coarse signal for the sparkline
+    coarse_signal = compute_windowed(text, metric=color_metric)
+    global_value = float(np.mean(coarse_signal))
+
+    fig = render_galaxy(
+        image,
+        save_path=save_path,
+        title=title,
+        metric_label=color_metric,
+        metric_value=global_value,
+        metric_signal=coarse_signal,
+        size=size,
+        dpi=dpi,
+    )
+    return fig
+
+
 __all__ = [
     "analyse",
+    "analyse_galaxy",
     "analyse_metrics",
     "parse",
     "compute_summary",
     "compute_windowed",
     "signal_to_image",
     "multi_scale_image",
+    "galaxy_points",
+    "galaxy_image",
     "render",
     "render_to_bytes",
+    "render_galaxy",
+    "render_galaxy_to_bytes",
     "TextMetrics",
     "AVAILABLE_METRICS",
 ]

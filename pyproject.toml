@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "perplexfern"
-version = "0.1.0"
-description = "Visualise the complexity of natural text as a fractal fern."
+version = "0.3.0"
+description = "Visualise the complexity of natural text as a data-driven fractal."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
